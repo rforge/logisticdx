@@ -1,0 +1,12 @@
+Package: LogisticDx
+Type: Package
+Title: Diagnostic tests for logistic regression models
+Version: 0.5
+Date: 2012-09-03
+Author: Christopher Dardis
+Maintainer:  <christopherdardis@gmail.com>
+Description: Diagnostic tests and plots for logistic regression models.
+Depends: R (>= 2.13.0)
+Imports: ggplot2,gridExtra,multcomp,gridExtra,ggplot2,MKmisc, pROC, rms, car, stats,statmod,graphics
+License: GPL (>= 2)
+LazyLoad: yes
