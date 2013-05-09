@@ -1,184 +1,266 @@
-plotLogiDx <-
-function(model, noPerPage=12, identify=FALSE, extras=FALSE,width=1500, height=800) {
-
-    if (class(model)[1] !="glm") return("plotLogiDx only applies to objects of class glm")
-
-### require(pROC)
-### require(car)
-### require(stats)
-### require(graphics)
-
-### abbreviations
+##' @name plotLogiDx
+##' @export
+##' @include logiDx.R
+##' @title Diagnostic plots for a logistic regression
+##'
+##' @description
+##' Common diagnostic plots for a logistic regression model
+##'
+##' @param model A logistic regression model of class \bold{glm}
+##' @param noPerPage Number of plots per page (for initial plots).
+##' Will be used as \emph{guidance} and optimised for ease of display
+##' @param cols Colours. Used by \code{graphics::points}
+##' @param cexp Cex (Character EXpansion). Used by \code{graphics::points}
+##' @param identify If \code{TRUE} will give option to identify
+##' individual points on a number of the plots produced.
+##' @param extras If \code{TRUE} produces additional plots, detailed below
+##' @param width Width of screen(display device) in pixels
+##' @param height Height of screen(display device) in pixels
+##' @return The following are plotted, for each covariate group:
+##'
+##' \item{probabiility_x_leverage}{Probability of \emph{y=1} for this group
+##' by leverage (diagonal of hat matrix, a measure of influence)}
+##' \item{probability_x_dXsq}{\dfn{dXsq} change in Pearson chi-square
+##' statistic with deletion of this group}
+##' \item{probability_x_dBhat}{\dfn{dBhat} change in Bhat; the difference in
+##' the maximum likelihood estimators \bold{Beta} for model coefficients with
+##' all subjects included vs those with this group, standardized by the
+##' estimated covariance matrix of \bold{Beta}}
+##' \item{probability_x_dDev}{\dfn{dDev} change in Deviance when this group
+##' excluded}
+##' \item{bubbleplot}{Probability by dXsq, with Area proportional to dBhat}
+##' \item{leverage_x_dXsq}{\dfn{dXsq} change in Pearson chi-square statistic
+##' with deletion of this group}
+##' \item{leverage_x_dBhat}{\dfn{dBhat} change in Bhat; the difference in
+##' the maximum likelihood estimators \bold{Beta} for model coefficients with
+##' all subjects included vs those with this group, standardized by the
+##' estimated covariance matrix of \bold{Beta}}
+##' \item{leverage_x_dDev}{\dfn{dDev} change in Deviance when this group
+##' excluded}
+##' \item{ROC}{Receiver Operator Curve}
+##'
+##' Additional plots given by \code{extras=TRUE}:
+##'
+##' \item{influenceplot}{from \code{\link{influencePlot}}}
+##' \item{studentizedResiduals_x_hatvalues}{\dfn{Studentized residual}
+##' = residual / estimate of its standard deviation}
+##' \item{spreadlevelplot}{from \code{\link{spreadLevelPlot}}}
+##' \item{qqPlot}{quantile-quantile plot vs Normal for residuals}
+##' \item{influenceIndexPlot}{Cooks distance, studentized residual and hat
+##' values for each observation}
+##' \item{pairsplot}{for measure of influence dBhat, dXsq, dDev}
+##' \item{component+residualplots}{from \code{\link{cr.plot}}}
+##' \item{added-variableplots}{from \code{\link{av.plot}}}
+##' \item{marginalmodelplots}{from \code{\link{marginalModelPlot}}}
+##'
+##' @note Different colors can be found with e.g.
+##' \code{grDevices::colours()[grep("blue",grDevices::colours())]}
+##'
+##' @seealso \code{\link{car}}
+##' @keywords hplot
+##' @examples
+##'
+##' set.seed(1)
+##' ### generate 8x covariate patterns
+##'
+##' mod1 <- genLogiDf(b=3,f=0,c=0,n=50)$model
+##' plotLogiDx(mod1, cexp=8, noPerPage=1)
+##' plotLogiDx(mod1, cexp=3, noPerPage=6, extras=TRUE)
+##'
+plotLogiDx <- function(model, noPerPage=12,
+                       cexp=2,
+                       cols=c("deepskyblue","dodgerblue"),
+                       identify=FALSE,
+                       extras=FALSE, width=1500, height=800) {
+    if (class(model)[1] !="glm")
+        stop("plotLogiDx only applies to objects of class glm")
+### get diagnostics for model
     m1 <- logiDx(model)$dxMatrix
-    f1 <- model
-    w1 <- model$data
-
-fun1 <- function(x) (x^2 + noPerPage )/ x
-nrow1 <- round( optimize(fun1, interval=seq(1:noPerPage))$minimum, 0)
-ncol1 <- round( noPerPage/nrow1, 0); nrow1;ncol1
-
-windows(record=T, width=width, height=height)
-p <- par
-
-par(mfrow= c(nrow1,ncol1),oma = c(0, 0, 4, 0), mar=c(4,6,3,0.5))
-###oma = outer margins, mar=margins, bottom,left,top,right
-
-### colours()[grep("blue",colours())] # select colours
+### find best balance for noPerPage
+    if (noPerPage==1) {
+        nrow1 <- ncol1 <- 1
+        } else {
+            balance <- function(x) (x^2 + noPerPage )/ x
+            nrow1 <- round(stats::optimize(balance,
+                                           interval=seq(1:noPerPage))$minimum,
+                           0)
+            ncol1 <- round( noPerPage/nrow1, 0)
+        }
+### open plot window
+    windows(record=TRUE, width=width, height=height)
+    p <- par
+### oma=outer margins, mar=margins, bottom,left,top,right
+    par( mfrow=c(nrow1,ncol1), oma=c(0,0,4,0), mar=c(4,6,3,0.5) )
+###
+    maintext <- function(){
+        tex1 <- paste0("Diagnostic plots for logistic regression \n ",
+                       deparse(model$formula))
+        graphics::mtext(tex1, line = 0.3, outer = TRUE)
+        }
 ###-------------------------------------------
 ### probabiility by leverage
-
-graphics::plot(m1[,"pi"], m1[,"lev"], xlab="Probability for this covariate pattern", main="Probability by leverage", ylab="Leverage (hat matrix diagonal)")
-###graphics::mtext("Leverage \n (hat \n matrix \n diagonal)", side=2, line=3,las=1) # horizontal on y-axis
-points(m1[,"pi"], m1[,"lev"], pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg=c("deepskyblue","dodgerblue"))
-if (isTRUE(identify)) graphics::identify(m1[,"pi"], m1[,"lev"])
-
-txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
+    graphics::plot(m1[ ,"prob"], m1[ ,"lev"],
+                   xlab="Probability for this covariate pattern",
+                   main="Probability by leverage",
+                   ylab="Leverage (hat matrix diagonal)")
+### to make horizontal on y-axis:
+### graphics::mtext("Leverage \n (hat \n matrix \n diagonal)", side=2, line=3, las=1)
+    graphics::points( m1[ ,"prob"], m1[ ,"lev"], pch=21, cex=cexp,
+           col = cols, bg = cols)
+    if (isTRUE(identify)) graphics::identify(m1[ ,"prob"], m1[ ,"lev"])
+    maintext()
 ###-------------------------------------------
 ### probability by ...
-
-graphics::plot(m1[,"pi"], m1[,"dXsq"], xlab="Probability for this covariate pattern", ylab="dXsq = decrease in Pearson Chi-sq \n without this pattern", main="dXsq by probability")
-points(m1[,"pi"], m1[,"dXsq"], pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg=c("deepskyblue","dodgerblue"))
-if (isTRUE(identify)) graphics::identify(m1[,"pi"], m1[,"dXsq"])
-
-txt<- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
-graphics::plot(m1[,"pi"], m1[,"dBhat"], xlab="Probability for this covariate pattern", ylab="dBhat = decrease in Bhat \n without this pattern", main="dBhat by probability")
-points(m1[,"pi"], m1[,"dBhat"], pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg=c("deepskyblue","dodgerblue"))
-if (isTRUE(identify)) graphics::identify(m1[,"pi"], m1[,"dBhat"])
-
-txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
-graphics::plot(m1[,"pi"], m1[,"dDev"], xlab="Probability for this covariate pattern", ylab="dDev = decrease in Deviance \n without this pattern", main="dDev by probability")
-points(m1[,"pi"], m1[,"dDev"], pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg=c("deepskyblue","dodgerblue"))
-if (isTRUE(identify)) graphics::identify(m1[,"pi"], m1[,"dDev"])
+### dXsq
+    graphics::plot(m1[ ,"prob"], m1[ ,"dXsq"],
+                   xlab="Probability for this covariate pattern",
+                   ylab="dXsq = decrease in Pearson Chi-sq \n without this pattern",
+                   main="dXsq by probability")
+    graphics::points(m1[ ,"prob"], m1[ ,"dXsq"], pch=21, cex=cexp,
+           col = cols, bg=cols)
+    if (isTRUE(identify)) graphics::identify(m1[ ,"prob"], m1[ ,"dXsq"])
+    maintext()
+### dBhat
+    graphics::plot(m1[ ,"prob"], m1[ ,"dBhat"],
+                   xlab="Probability for this covariate pattern",
+                   ylab="dBhat = decrease in Bhat \n without this pattern",
+                   main="dBhat by probability")
+    graphics::points(m1[ ,"prob"], m1[ ,"dBhat"], pch=21, cex=cexp,
+           col = cols, bg=cols)
+    if (isTRUE(identify)) graphics::identify(m1[ ,"prob"], m1[ ,"dBhat"])
+    maintext()
+### dDev
+    graphics::plot(m1[ ,"prob"], m1[ ,"dDev"],
+                   xlab="Probability for this covariate pattern",
+                   ylab="dDev = decrease in Deviance \n without this pattern",
+                   main="dDev by probability")
+    graphics::points(m1[ ,"prob"], m1[ ,"dDev"], pch=21, cex=cexp,
+           col = cols, bg=cols)
+    if (isTRUE(identify)) graphics::identify(m1[ ,"prob"], m1[ ,"dDev"])
+    maintext()
+###-------------------------------------------
+### bubble plot - prob by dXsq, with area = dBhat
+    radius <- sqrt(m1[ ,"dBhat"]/ m1[ ,"prob"])
+    graphics::symbols(m1[ ,"prob"], m1[ ,"dXsq"],
+                      circles=radius, inches=0.35,
+                      fg="white", bg=cols,
+                      xlab="Probability for this covariate pattern",
+                      ylab="dXsq = decrease in Pearson Chi-sq \n without this pattern",
+                      main = "Area proportional to dBhat \n Decrease in Bhat without this pattern")
+    if (isTRUE(identify)) graphics::identify(m1[ ,"prob"], m1[ ,"dXsq"])
+    maintext()
 
 ###---------------------------
-### bubble plot
-
-radius <- sqrt(m1[,"dBhat"]/ m1[,"pi"])
-symbols(m1[,"pi"], m1[,"dXsq"], circles=radius, inches=0.35, fg="white", bg=c("deepskyblue","dodgerblue"), xlab="Probability for this covariate pattern", ylab="dXsq = decrease in Pearson Chi-sq \n without this pattern", main = "Area proportional to dBhat \n Decrease in Bhat without this pattern")
-if (isTRUE(identify)) graphics::identify(m1[,"pi"], m1[,"dXsq"])
-
-txt<- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
-###-------------------------------------------
 ### leverage by...
-
-graphics::plot(m1[,"lev"], m1[,"dXsq"], xlab="Leverage for this covariate pattern", ylab="dXsq = decrease in Pearson Chi-sq \n without this pattern", main="dXsq by leverage")
-points(m1[,"lev"], m1[,"dXsq"], pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg=c("deepskyblue","dodgerblue"))
-if (isTRUE(identify)) graphics::identify(m1[,"lev"], m1[,"dXsq"])
-
-txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
-graphics::plot(m1[,"lev"], m1[,"dBhat"], xlab="Leverage for this covariate pattern", ylab="dBhat = decrease in Bhat \n without this pattern", main="dBhat by leverage")
-points(m1[,"lev"], m1[,"dBhat"], pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg=c("deepskyblue","dodgerblue"))
-if (isTRUE(identify)) graphics::identify(m1[,"lev"], m1[,"dBhat"])
-
-txt<- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
-graphics::plot(m1[,"lev"], m1[,"dDev"], xlab="Leverage for this covariate pattern", ylab="dDev = decrease in Deviance \n without this pattern", main="dDev by leverage")
-points(m1[,"lev"], m1[,"dDev"], pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg=c("deepskyblue","dodgerblue"))
-if (isTRUE(identify)) graphics::identify(m1[,"lev"], m1[,"dDev"])
-
-txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
+### dXsq
+    graphics::plot(m1[ ,"lev"], m1[ ,"dXsq"],
+                   xlab="Leverage for this covariate pattern",
+                   ylab="dXsq = decrease in Pearson Chi-sq \n without this pattern",
+                   main="dXsq by leverage")
+    graphics::points(m1[ ,"lev"], m1[ ,"dXsq"], pch=21, cex=cexp,
+           col = cols, bg=cols)
+    if (isTRUE(identify)) graphics::identify(m1[ ,"lev"], m1[ ,"dXsq"])
+    maintext()
+### dBhat
+    graphics::plot(m1[ ,"lev"], m1[ ,"dBhat"],
+                   xlab="Leverage for this covariate pattern",
+                   ylab="dBhat = decrease in Bhat \n without this pattern",
+                   main="dBhat by leverage")
+    graphics::points(m1[ ,"lev"], m1[ ,"dBhat"], pch=21, cex=cexp,
+           col=cols, bg=cols)
+    if (isTRUE(identify)) graphics::identify(m1[ ,"lev"], m1[ ,"dBhat"])
+    maintext()
+### dDev
+    graphics::plot(m1[ ,"lev"], m1[ ,"dDev"],
+                   xlab="Leverage for this covariate pattern",
+                   ylab="dDev = decrease in Deviance \n without this pattern",
+                   main="dDev by leverage")
+    graphics::points(m1[ ,"lev"], m1[ ,"dDev"], pch=21, cex=cexp,
+           col = cols, bg=cols)
+    if (isTRUE(identify)) graphics::identify(m1[ ,"lev"], m1[ ,"dDev"])
+    maintext()
+###
 ### ROC curve
-e1 <- eval(parse(text="f1$formula[[2]]")) # get name of y/ outcome variable from formula
-e1 <- paste("w1$",e1,sep="")
-e1 <- eval(parse(text=e1)) # change to vector for use in following formula
-r1 <- pROC::roc (e1 ~ f1$fitted, ci=TRUE, percent=TRUE)
-pROC::plot.roc(r1, print.auc=TRUE, grid=TRUE, print.auc.cex=0.8, main="ROC curve") # 0.5 = chance, aim >0.7
-
-txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
+### get name of y/ outcome variable from formula
+    r1 <- pROC::roc(response=model$data[[ncol(model$data)]],
+                    predictor=model$fitted,
+                     ci=TRUE, percent=TRUE)
+### 0.5 = chance, aim >0.7
+    pROC::plot.roc(r1, print.auc=TRUE, grid=TRUE,
+                   print.auc.cex=0.8, main="ROC curve")
+    maintext()
 ### influence plot
-if (isTRUE(identify)){
-car::influencePlot(f1, id.n=1.5, id.method="identify",id.col="blue", scale=15,
-	xlab="Hat values (vertical lines at x2, x3 average hat value)",
-	main="Area proportional to Cooks distance",
-	sub="Cooks = change in coefficients if this point dropped")
-	}else{
-	car::influencePlot(f1, id.n=1.5, id.method="noteworthy",id.col="blue", scale=15,
-	xlab="Hat values (vertical lines at x2, x3 average hat value)",
-	main="Area proportional to Cooks distance",
-	sub="Cooks = change in coefficients if this point dropped")
-	}
-
-txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-graphics::mtext(txt, line = 0.3, outer = TRUE)
-
-
+    if (isTRUE(identify)){
+        car::influencePlot(model,
+                           id.n=1.5,
+                           id.method="identify",id.col="blue", scale=15,
+                           xlab="Hat values (vertical lines at x2, x3 average hat value)",
+                           main="Area proportional to Cooks distance",
+                           sub="Cooks = change in coefficients if this point dropped")
+    } else {
+	car::influencePlot(model, id.n=1.5, id.method="noteworthy",
+                           id.col="blue", scale=15,
+                           xlab="Hat values (vertical lines at x2, x3 average hat value)",
+                           main="Area proportional to Cooks distance",
+                           sub="Cooks = change in coefficients if this point dropped")
+    }
+    maintext()
+###
 ###---------------------------------------------------------
 ### optional plots
-
-if (isTRUE(extras)) {
+###
+    if (isTRUE(extras)) {
 ### studentized residuals vs hat values
-    graphics::plot(rstudent(f1) ~ hatvalues(f1),
-         xlab="Hat values",
-         ylab="Studentized residuals (residual / estimate of its S.D.)",
-         main="Studentized residuals by hat values") # recommended by some
-    points(hatvalues(f1), rstudent(f1), pch=21, cex = 2, col = c("deepskyblue","dodgerblue"), bg= c("deepskyblue","dodgerblue"))
-    if (isTRUE(identify)) {graphics::identify(hatvalues(f1), rstudent(f1), cex=1.5)}
-    txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-    graphics::mtext(txt, line = 0.3, outer = TRUE)
-
+        graphics::plot(rstudent(model) ~ hatvalues(model),
+                       xlab="Hat values",
+                       ylab="Studentized residuals (residual / estimate of its S.D.)",
+                       main="Studentized residuals by hat values")
+        graphics::points(hatvalues(model), rstudent(model), pch=21, cex=cexp,
+                         col = cols, bg=cols)
+        if (isTRUE(identify)) {
+            graphics::identify(hatvalues(model), rstudent(model), cex=1.5)}
+        maintext()
 ### spread level plot
-   car::spreadLevelPlot(f1, layout=NA,
-                    main="Spread-Level plot \n Spread should be even \n if variance of error is constant")
-    txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-    graphics::mtext(txt, line = 0.3, outer = TRUE)
-
+        car::spreadLevelPlot(model, layout=NA,
+                             main="Spread-Level plot \n Spread should be even \n if variance of error is constant")
+        maintext()
 ### qqnorm for residuals
-    q1 <- stats::qqnorm(statmod::qresid(f1),col="darkblue", cex=1.5,
-                 main="Normal Q-Q plot for residuals from formula \n Check if residuals normally distributed",
-                 ylab="Quantiles from formula")
-    stats::qqline((statmod::qresid(f1)),col="darkblue",lwd=1.5)
-    if (isTRUE(identify)) graphics::identify(q1, cex=1.5)
-    txt <- paste("Diagnostic plots for logistic regression \n", deparse(f1$formula), sep=" ")
-    graphics::mtext(txt, line = 0.3, outer = TRUE)
-
+        q1 <- stats::qqnorm(statmod::qresid(model),col="darkblue", cex=1.5,
+                            main="Normal Q-Q plot for residuals from formula \n Check if residuals normally distributed",
+                            ylab="Quantiles from formula")
+        stats::qqline((statmod::qresid(model)),col="darkblue",lwd=1.5)
+        if (isTRUE(identify)) graphics::identify(q1, cex=1.5)
+        maintext()
 ### Cooks, stud~ res~ and hat values by index
-    if (isTRUE(identify)){
-	car::influenceIndexPlot(f1, col="dodgerblue", id.method = "identify",
-                           vars=c("Cook", "Studentized", "hat"),
-                           main="Cooks distance, studentized residuals \n and hat values by Index (of observations)")
-    } else {
-        car::influenceIndexPlot(f1, col="dodgerblue", id.method = "y",
-                           vars=c("Cook", "Studentized", "hat"),
-                           main="Cooks distance, studentized residuals \n and hat values by Index (of observations)")
-    }
-
+        if (isTRUE(identify)){
+            car::influenceIndexPlot(model, col="dodgerblue",
+                                    id.method = "identify",
+                                    vars=c("Cook", "Studentized", "hat"),
+                                    main="Cooks distance, studentized residuals \n and hat values by Index (of observations)")
+        } else {
+            car::influenceIndexPlot(model, col="dodgerblue",
+                                    id.method = "y",
+                                    vars=c("Cook", "Studentized", "hat"),
+                                    main="Cooks distance, studentized residuals \n and hat values by Index (of observations)")
+        }
 ### pairs plot for measures of influence
-    graphics::pairs(m1[,c("dBhat", "dXsq", "dDev")], col="darkblue", cex=1.5,
-          main="Pairs plot; correlation between dBhat, dXsq, dDev")
-
+        graphics::pairs(m1[ ,c("dBhat", "dXsq", "dDev")],
+                        col="darkblue", cex=1.5,
+                        main="Pairs plot; correlation between dBhat, dXsq, dDev")
 ### component + residual plots
-    car::crPlots(f1,
-            main="Partial (component +) residual plots. Check linear for each predictor.",
-            sub ="xi  vs.  bi*xi + residuals (from full model)")
-
+        car::crPlots(model,
+                     main="Partial (component +) residual plots. Check linear for each predictor.",
+                     sub ="xi  vs.  bi*xi + residuals (from full model)")
 ### Av Plot
-    car::avPlots(f1, intercept=TRUE,
-            main="Added-variable plots = y~x, adjusted for others, should be linear", cex=1)
-
+        car::avPlots(model, intercept=TRUE,
+                     main="Added-variable plots = y~x, adjusted for others, should be linear",
+                     cex=1)
 ### marginal model plots
-par(mfrow= c(nrow1,ncol1),oma = c(0, 0, 4, 0), mar=c(4,6,3,0.5))
-    car::marginalModelPlots(model=f1)
-txt <- "Marginal model plots: \n Plots of outcome for each and all predictors \n (with loess smooth)"
-graphics::mtext(txt, line=0, outer = FALSE, cex=1.3)
-
-
-}
-
-par <- p
-
+        par( mfrow=c(nrow1,ncol1), oma = c(0,0,4,0), mar=c(4,6,3,0.5) )
+### prevent stopping here due to error
+        tryCatch(car::marginalModelPlots(model), error=function(e)e )
+        tex1 <- "Marginal model plots (with loess smooth): \n Plots of outcome for each and all predictors"
+        graphics::mtext(tex1, line=0, outer = TRUE, cex=1.3)
+    }
+    par <- p
 }
