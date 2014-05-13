@@ -10,13 +10,9 @@
 }
 \details{
   \tabular{ll}{ Package: \tab LogisticDx\cr Type: \tab
-  Package\cr Version: \tab 0.5\cr Date: \tab 2012-09-03\cr
-  Date: \tab 2012-08-26 \cr License: \tab GPL (>= 2) \cr
+  Package\cr Version: \tab 0.5\cr
+  Date: \tab 2014-05-01 \cr License: \tab GPL (>= 2) \cr
   LazyLoad: \tab yes \cr }
-}
-\examples{
-model1 <- genLogiDf(n=20)$model
-logiDx(model1)
 }
 \author{
   Christopher Dardis <christopherdardis@gmail.com>

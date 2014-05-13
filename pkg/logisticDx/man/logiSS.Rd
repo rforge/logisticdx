@@ -2,11 +2,10 @@
 \alias{logiSS}
 \title{Sample size for given coefficient and events per covariate for model}
 \usage{
-  logiSS(model, alpha = 0.05, beta = 0.8, coeff = "x1")
+  logiSS(x, alpha = 0.05, beta = 0.8, coeff = "x1")
 }
 \arguments{
-  \item{model}{A logistic regression model of class
-  \bold{glm}}
+  \item{x}{A logistic regression model of class \code{glm}}
 
   \item{alpha}{significance level \eqn{\alpha} for
   null-hypothesis significance test}
@@ -37,20 +36,20 @@
 \examples{
 set.seed(1)
 ### one coefficient, which is binomial
-f1 <- genLogiDf(b=1,c=0,n=50)$model
+f1 <- genLogiDf(b=1, c=0, n=50)$model
 logiSS(f1)
 ###
 ### one coefficient, which is continuous
-f1 <- genLogiDf(f=0,b=0,c=1,n=50,asFactor=TRUE)$model
+f1 <- genLogiDf(f=0, b=0, c=1, n=50)$model
 logiSS(f1, coeff="x1")
 ###
-### binomail coefficient
-f1 <- genLogiDf(f=1,b=1,c=1,n=50)$model
-logiSS(f1,coeff="x2")
+### binomial coefficient
+f1 <- genLogiDf(f=0, b=1, c=1, n=50)$model
+logiSS(f1, coeff="x1")
 ###
 ### continuous coefficient
-f1 <- genLogiDf(f=1,b=1,c=1,n=50)$model
-logiSS(f1,coeff="x3")
+f1 <- genLogiDf(f=0, b=1, c=1, n=50)$model
+logiSS(f1, coeff="x2")
 }
 \keyword{htest}
 

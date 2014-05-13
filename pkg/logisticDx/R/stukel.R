@@ -1,5 +1,6 @@
 ##' @name stukel
 ##' @export
+##' @include genLogi.R
 ##' @title Stukels test of the logistic link
 ##'
 ##' @description
@@ -43,11 +44,12 @@ stukel <- function(object, alternative = c("both", "alpha1", "alpha2")) {
     alternative <- match.arg(alternative)
     eta <- predict(object, type = "link")
     etasq <- 0.5 * eta * eta
+### is positive?
     etapos <- eta > 0
     dv <- matrix(0, nrow = length(eta), ncol = 2)
     dv[etapos, 1] <- etasq[etapos]
     dv[!etapos, 2] <- - etasq[!etapos]
-    colnames(dv) <- c("z1","z2")
+    colnames(dv) <- c("z1", "z2")
     oinfo <- stats::vcov(object)
 ### qr decomposition of matrix
     oX <- qr.X(object$qr)
