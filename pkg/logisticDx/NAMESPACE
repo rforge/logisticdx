@@ -1,3 +1,4 @@
+import(car, data.table, multcomp, pROC)
 export(genLogiDf)
 export(genLogiDt)
 export(logiDx)

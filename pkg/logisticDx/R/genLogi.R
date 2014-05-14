@@ -56,7 +56,7 @@ NULL
 ##' @aliases genLogiDf
 ##' @examples
 ##' set.seed(1)
-##' genLogiDf()
+##' genLogiDf(speedglm=TRUE)
 ##'
 genLogiDf <- function(b=2L, f=2L, c=1L, n=20L,
                       nlf=3L,
@@ -94,7 +94,7 @@ genLogiDf <- function(b=2L, f=2L, c=1L, n=20L,
     fmla <- as.formula(paste("y ~ ", paste(xnam1, collapse= "+")  ))
 ### use speeedglm?
     if(speedglm){
-        f1 <- speedglm:::speedglm(formula=fmla, family=binomial(), data=df1)
+        f1 <- speedglm::speedglm(formula=fmla, family=binomial(), data=df1)
     } else {
         f1 <- stats::glm(formula=fmla, family=binomial("logit"), data=df1)
     }
@@ -175,7 +175,7 @@ genLogiDt <- function(b=2L, f=2L, c=1L, n=20L,
     fmla <- as.formula(paste("y ~ ", paste(xnam1, collapse= "+")  ))
 ### use speeedglm?
     if(speedglm){
-        f1 <- speedglm:::speedglm(formula=fmla, family=binomial(), data=dt1)
+        f1 <- speedglm::speedglm(formula=fmla, family=binomial(), data=dt1)
     } else {
         f1 <- stats::glm(formula=fmla, family=binomial("logit"), data=dt1)
     }
