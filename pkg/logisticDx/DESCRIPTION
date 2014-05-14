@@ -1,4 +1,4 @@
-Package: LogisticDx
+Package: logisticDx
 Type: Package
 Title: Diagnostic tests for logistic regression models
 Version: 0.1

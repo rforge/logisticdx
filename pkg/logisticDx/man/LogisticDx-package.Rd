@@ -1,5 +1,5 @@
 \docType{package}
-\name{LogisticDx-package}
+\name{logisticDx-package}
 \alias{logisticDx}
 \alias{LogisticDx}
 \alias{LogisticDx-package}
